@@ -61,9 +61,6 @@ summarize_df(combine2, "combine2")
 summarize_df(ct1, "ct1")
 summarize_df(ct2, "ct2")
 
-#------------------------------------------------------------------------------
-# 2. 샘플 데이터 생성 (1~2% 또는 최대 1000행)
-#------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # 2. 샘플 데이터 생성 (1~2% 또는 최대 1000행)
@@ -136,15 +133,21 @@ combined <- bind_rows(combine1, combine2)
 
 # 5. 재방문 환자 분석 --------------------------------------------------------
 
+#==============================================================================
+# 수정: visit_counts 계산 부분 (더 명확한 버전)
+#==============================================================================
+
+# 5. 재방문 환자 분석 --------------------------------------------------------
+cat("=== STEP 5: 재방문 환자 분석 ===\n")
 
 # 등록번호 + 내원일자 기준으로 방문 횟수 계산
+
+# ⭐ 같은 날 여러 번 내원해도 1회로 카운트
 visit_counts <- combined %>%
-  # 등록번호, 내원일자가 모두 있는 행만
   filter(!is.na(등록번호), !is.na(내원일자), 
          등록번호 != "", 내원일자 != "") %>%
-  # 환자별 내원일자별 그룹화
-  group_by(등록번호, 내원일자) %>%
-  summarise(n_visits_same_day = n(), .groups = "drop") %>%
+  # 등록번호 + 내원일자 조합이 같으면 1개 행만 남김
+  distinct(등록번호, 내원일자) %>%
   # 환자별 총 방문일 수 계산
   group_by(등록번호) %>%
   summarise(
@@ -152,26 +155,40 @@ visit_counts <- combined %>%
     방문일자_목록 = paste(내원일자, collapse = ", "),
     .groups = "drop"
   )
+visit_counts
+
+
+# 확인: 중복 제거 전후 비교
+cat(sprintf("✓ 중복 제거 전 기록: %d건\n", 
+            nrow(combined %>% filter(!is.na(등록번호), !is.na(내원일자)))))
+cat(sprintf("✓ 중복 제거 후 (환자-날짜 조합): %d건\n", 
+            nrow(combined %>% filter(!is.na(등록번호), !is.na(내원일자)) %>% 
+                   distinct(등록번호, 내원일자))))
 
 # 2회 이상 내원한 환자만 필터링
 repeat_visitors <- visit_counts %>%
   filter(총_방문일수 >= 2) %>%
-  arrange(desc(총_방문일수), 등록번호);repeat_visitors
+  arrange(desc(총_방문일수), 등록번호)
+repeat_visitors
+
 
 cat(sprintf("✓ 전체 환자 수: %d명\n", n_distinct(combined$등록번호)))
-cat(sprintf("✓ 2회 이상 내원 환자: %d명 (%.1f%%)\n", 
+cat(sprintf("✓ 2회 이상 내원 환자: %d명 (%.1f%%)\n\n", 
             nrow(repeat_visitors),
             nrow(repeat_visitors) / n_distinct(combined$등록번호) * 100))
 
+
+
 # 6. 재방문 환자 상세 정보 테이블 --------------------------------------------
 
-
-# 재방문 환자의 전체 방문 기록
+# 재방문 환자의 전체 기록
 repeat_visit_details <- combined %>%
   filter(등록번호 %in% repeat_visitors$등록번호) %>%
   select(등록번호, 환자명, 내원일자, 내원시간, 성별, 나이, 
          주증상1, 진단명, 진료결과) %>%
   arrange(등록번호, 내원일자, 내원시간)
+repeat_visit_details
+
 
 
 # 7. 결과 테이블 요약 --------------------------------------------------------
@@ -182,6 +199,7 @@ visit_freq_summary <- repeat_visitors %>%
   mutate(비율 = round(환자수 / sum(환자수) * 100, 1)) %>%
   arrange(desc(총_방문일수))
 
+visit_freq_summary
 print(visit_freq_summary, n = 20)
 
 # 8. 결과 저장 ---------------------------------------------------------------
