@@ -190,6 +190,39 @@ repeat_visit_details <- combined %>%
 repeat_visit_details
 
 
+# 같은 날 2번 이상 내원한 환자 정보
+revisit_patients_info <- combined %>%
+  # 데이터 정제
+  filter(!is.na(등록번호), !is.na(내원일자), 
+         등록번호 != "", 내원일자 != "") %>%
+  
+  # 일일 방문 횟수 계산 (mutate = 원본 유지!)
+  group_by(등록번호, 내원일자) %>%
+  mutate(일일방문횟수 = n()) %>%  #  n() 그굽으로 묶었을때 그 그룹마다 몇개씩 있냐?
+  ungroup() %>%
+  
+  # 하루 2번 이상 방문한 적 있는 환자만
+  group_by(등록번호) %>%
+  filter(any(일일방문횟수 >= 2)) %>%
+  ungroup() %>%
+  
+  # 각 환자의 첫 방문만 (환자당 1행)
+  group_by(등록번호) %>%
+  arrange(내원일자) %>%
+  slice(1) %>%
+  ungroup() %>%
+  
+  # 필요한 컬럼만
+  select(등록번호, 나이, 성별,일일방문횟수)
+
+# 결과 확인
+revisit_patients_info
+
+# 환자 수 확인
+cat("같은 날 2번 이상 내원한 환자:", nrow(revisit_patients_info), "명\n")
+
+
+
 
 # 7. 결과 테이블 요약 --------------------------------------------------------
 
