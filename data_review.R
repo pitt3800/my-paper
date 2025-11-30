@@ -1,3 +1,6 @@
+#.데이터 로딩& 파일 합치기  & smple data 만들기
+#.재방문 case 확인하기
+
 #------------------------------------------------------------------------------
 # 0. 환경 설정
 #------------------------------------------------------------------------------
@@ -36,10 +39,8 @@ ct2 <- read_excel(
   "CT_result(3.0).xlsx"
 )
 
-
-
 #------------------------------------------------------------------------------
-# 1. 기본 구조 및 결측치 요약
+# . 기본 구조 및 결측치 요약
 #------------------------------------------------------------------------------
 summarize_df <- function(df, name) {
   cat("\n=====", name, "=====\n")
@@ -62,6 +63,94 @@ summarize_df(ct1, "ct1")
 summarize_df(ct2, "ct2")
 
 
+
+#------------------------------------------------------------------------------
+# 결측치 상위 5개 변수 포함 행만 필터링-결측치가 포함된 case가 뭔지
+#------------------------------------------------------------------------------
+
+fever_lab_missing_top5 <- fever_lab %>%
+  filter(
+    is.na(보고일) |
+      is.na(결과) |
+      is.na(검사명)
+    # 필요시 추가 변수 포함
+    # 예: is.na(다른_변수) |
+  )
+fever_lab_missing_top5
+
+
+#==============================================================================
+# 파일 통합
+# 목표: combine1, combine2 병합 , ct1, ct2 병합
+#==============================================================================
+
+# . 컬럼명 통일 -------------------------------------------------------------
+cat("=== STEP 2: 컬럼명 통일 ===\n")
+
+# combine1의 "이름" → "환자명"으로 변경
+if ("이름" %in% names(combine1)) {
+  combine1 <- combine1 %>% rename(환자명 = 이름)
+  cat("✓ combine1: '이름' → '환자명'\n")
+}
+# "전원온병원" → "전원온 병원" 통일
+if ("전원온병원" %in% names(combine1)) {
+  combine1 <- combine1 %>% rename(`전원온 병원` = 전원온병원)
+  cat("✓ combine1: '전원온병원' → '전원온 병원'\n")
+}
+# "퇴원일" → "퇴원일자" 통일
+if ("퇴원일" %in% names(combine1)) {
+  combine1 <- combine1 %>% rename(퇴원일자 = 퇴원일)
+  cat("✓ combine1: '퇴원일' → '퇴원일자'\n")
+}
+# combine2에 "노트" 컬럼 추가 (없을 경우)
+if (!"노트" %in% names(combine2)) {
+  combine2$노트 <- NA_character_
+  cat("✓ combine2: '노트' 컬럼 추가\n")
+}
+# 3. 데이터 타입 통일 (병합 전 필수) -----------------------------------------
+# 모든 컬럼을 문자형으로 변환 (타입 불일치 방지)
+combine1 <- combine1 %>% mutate(across(everything(), as.character))
+combine2 <- combine2 %>% mutate(across(everything(), as.character))
+
+# 4. 두 파일 병합 ------------------------------------------------------------
+cat("=== STEP 4: 데이터 병합 ===\n")
+
+# 컬럼 순서 맞추기 (combine1 기준)
+col_names <- names(combine1)
+combine2 <- combine2[, col_names]
+
+# 병합
+combined <- bind_rows(combine1, combine2)
+write_excel_csv(combined, "combined_sample.csv")
+
+
+
+##.ct1, ct 2파일 병합 ================================================================
+
+# 각 파일 크기 확인
+dim(ct1)  # 행, 열
+dim(ct2)
+
+# 컬럼명 확인 (두 파일이 동일한지)
+names(ct1)
+names(ct2)
+
+# 행 결합 (row bind)
+ct12 <- bind_rows(ct1, ct2)
+
+# 결합 결과 확인
+dim(ct12)
+nrow(ct1) + nrow(ct2)
+
+# 첫/마지막 몇 행 확인
+head(ct12, 3)
+tail(ct12, 3)
+
+write_excel_csv(ct12, "ct12.csv")
+
+
+
+
 #------------------------------------------------------------------------------
 # 2. 샘플 데이터 생성 (1~2% 또는 최대 1000행)
 #------------------------------------------------------------------------------
@@ -79,60 +168,13 @@ sample_df(combine2, "combine2")
 sample_df(ct1, "ct1")
 sample_df(ct2, "ct2")
 
-
-#==============================================================================
-# 재방문 환자 분석
-# 목표: combine1, combine2 병합 후 2회 이상 내원 환자 분석
-#==============================================================================
-
-# 2. 컬럼명 통일 -------------------------------------------------------------
-cat("=== STEP 2: 컬럼명 통일 ===\n")
-
-# combine1의 "이름" → "환자명"으로 변경
-if ("이름" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(환자명 = 이름)
-  cat("✓ combine1: '이름' → '환자명'\n")
-}
-
-# "전원온병원" → "전원온 병원" 통일
-if ("전원온병원" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(`전원온 병원` = 전원온병원)
-  cat("✓ combine1: '전원온병원' → '전원온 병원'\n")
-}
-
-# "퇴원일" → "퇴원일자" 통일
-if ("퇴원일" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(퇴원일자 = 퇴원일)
-  cat("✓ combine1: '퇴원일' → '퇴원일자'\n")
-}
-
-# combine2에 "노트" 컬럼 추가 (없을 경우)
-if (!"노트" %in% names(combine2)) {
-  combine2$노트 <- NA_character_
-  cat("✓ combine2: '노트' 컬럼 추가\n")
-}
-
-# 3. 데이터 타입 통일 (병합 전 필수) -----------------------------------------
+#.csv 파일까지 다 저장시켰네.
 
 
-# 모든 컬럼을 문자형으로 변환 (타입 불일치 방지)
-combine1 <- combine1 %>% mutate(across(everything(), as.character))
-combine2 <- combine2 %>% mutate(across(everything(), as.character))
-
-
-# 4. 두 파일 병합 ------------------------------------------------------------
-cat("=== STEP 4: 데이터 병합 ===\n")
-
-# 컬럼 순서 맞추기 (combine1 기준)
-col_names <- names(combine1)
-combine2 <- combine2[, col_names]
-
-# 병합
-combined <- bind_rows(combine1, combine2)
-
+# 전체케이스 nrow(combined): 14959  중복환자 모두제외length(unique(combined$등록번호)):11481
+# 다른날 온환자는 다른 환자로 취급 14907
 
 # 5. 재방문 환자 분석 --------------------------------------------------------
-
 #==============================================================================
 # 수정: visit_counts 계산 부분 (더 명확한 버전)
 #==============================================================================
@@ -141,8 +183,7 @@ combined <- bind_rows(combine1, combine2)
 cat("=== STEP 5: 재방문 환자 분석 ===\n")
 
 # 등록번호 + 내원일자 기준으로 방문 횟수 계산
-
-# ⭐ 같은 날 여러 번 내원해도 1회로 카운트
+# ⭐ 같은 날 여러 번 내원해도 1회로 카운트, 한 환자가 다른날 여러번 내원하면 다른케이스로
 visit_counts <- combined %>%
   filter(!is.na(등록번호), !is.na(내원일자), 
          등록번호 != "", 내원일자 != "") %>%
@@ -158,25 +199,11 @@ visit_counts <- combined %>%
 visit_counts
 
 
-# 확인: 중복 제거 전후 비교
-cat(sprintf("✓ 중복 제거 전 기록: %d건\n", 
-            nrow(combined %>% filter(!is.na(등록번호), !is.na(내원일자)))))
-cat(sprintf("✓ 중복 제거 후 (환자-날짜 조합): %d건\n", 
-            nrow(combined %>% filter(!is.na(등록번호), !is.na(내원일자)) %>% 
-                   distinct(등록번호, 내원일자))))
-
 # 2회 이상 내원한 환자만 필터링
 repeat_visitors <- visit_counts %>%
   filter(총_방문일수 >= 2) %>%
   arrange(desc(총_방문일수), 등록번호)
 repeat_visitors
-
-
-cat(sprintf("✓ 전체 환자 수: %d명\n", n_distinct(combined$등록번호)))
-cat(sprintf("✓ 2회 이상 내원 환자: %d명 (%.1f%%)\n\n", 
-            nrow(repeat_visitors),
-            nrow(repeat_visitors) / n_distinct(combined$등록번호) * 100))
-
 
 
 # 6. 재방문 환자 상세 정보 테이블 --------------------------------------------
@@ -235,14 +262,37 @@ visit_freq_summary <- repeat_visitors %>%
 visit_freq_summary
 print(visit_freq_summary, n = 20)
 
+
+
 # 8. 결과 저장 ---------------------------------------------------------------
 
 # CSV 저장 (한글 깨짐 방지)
+
+#.write_excel_csv(combined, "combined_sample.csv") 앞에서 했음
+#.5개law file csv 
+
+
 write_excel_csv(repeat_visitors, "재방문환자_요약.csv")
+write_excel_csv(repeat_visit_details, "재방문환자_상세기록.csv")
+write_excel_csv(revisit_patients_info, "같은날2번이상내원.csv")
 write_excel_csv(repeat_visit_details, "재방문환자_상세기록.csv")
 write_excel_csv(visit_freq_summary, "방문횟수_분포.csv")
 
-# RDS 저장 (R 전용)
-saveRDS(repeat_visitors, "재방문환자_요약.rds")
+## RDS 저장 (R 전용)
+
+
+#.original
+
+
+saveRDS(combine1, "combine1.rds")
+saveRDS(combine2, "combine2.rds")
+saveRDS(ct1, "ct1.rds")
+saveRDS(ct2, "ct2.rds")
+
+saveRDS(fever_lab, "fever_lab.rds")
+saveRDS(ct12, "ct12.rds")
+saveRDS(combined, "combined.rds")
+
+#.계산한 내용
 saveRDS(repeat_visit_details, "재방문환자_상세기록.rds")
 
