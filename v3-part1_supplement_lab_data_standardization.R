@@ -160,7 +160,7 @@ standardize_detail_name <- function(detail_name) {
 cat("1. 데이터 로딩 중...\n")
 
 # 파일 경로 설정 (필요에 따라 수정)
-setwd("/Users/youjinlee/Documents/My R/Fever c claude/2017_2025_s")
+setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 # 파일 경로 설정
 input_file <- "ER_LAB_RSLT_s.csv"  
@@ -264,6 +264,8 @@ if (length(all_blood_culture_rows) > 0) {
   cat("\n  Blood culture 결과 분포:\n")
   print(bc_summary)
 }
+
+
 
 # 기존 검사명 표준화 (Blood_culture는 제외)
 cat("\n3. 검사명 표준화 중...\n")

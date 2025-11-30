@@ -15,7 +15,7 @@
 library(tidyverse)
 library(lubridate)
 
-setwd("/Users/youjinlee/Documents/My R/Fever c claude/2017_2025_s")
+setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 cat("\n╔═══════════════════════════════════════════════════════════╗\n")
 cat("  Part 2a: Fever Including  타입 변환   \n")

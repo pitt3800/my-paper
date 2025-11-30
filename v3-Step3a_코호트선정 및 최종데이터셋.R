@@ -14,7 +14,7 @@ library(tidyverse)
 library(readxl)
 
 # 작업 디렉토리 설정 (v3 버전 경로)
-setwd("/Users/youjinlee/Documents/My R/Fever c claude/2017_2025_s")
+setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 cat("\n╔═══════════════════════════════════════════════════════════╗\n")
 cat("  v3-Step 3a: CT 데이터 준비 및 외부 분석                   \n")

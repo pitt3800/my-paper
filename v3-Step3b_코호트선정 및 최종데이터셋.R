@@ -15,7 +15,7 @@ library(janitor)
 library(lubridate)
 
 # 작업 디렉토리 설정 (v3 버전 경로)
-setwd("/Users/youjinlee/Documents/My R/Fever c claude/2017_2025_s")
+setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 cat("\n╔═══════════════════════════════════════════════════════════╗\n")
 cat("  v3-Step 3b: 최종 코호트 선정 및 데이터셋 생성             \n")

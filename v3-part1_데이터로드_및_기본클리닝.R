@@ -20,7 +20,7 @@ library(janitor)        # 변수명 클리닝
 library(lubridate)      # 날짜 처리
 
 # 작업 디렉토리 설정 (사용자 환경에 맞게 수정)
-setwd("/Users/youjinlee/Documents/My R/Fever c claude/2017_2025_s")
+setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 # 출력 디렉토리 생성
 dir.create("cleaned_data", showWarnings = FALSE)
