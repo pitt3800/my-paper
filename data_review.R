@@ -23,11 +23,11 @@ fever_lab <- read_csv(
   show_col_types = FALSE
 )
 
-combine1 <- read_excel(
+combined_1 <- read_excel(
   "base_result_nurse_fever.xlsx"
 )
 
-combine2 <- read_excel(
+combined_2 <- read_excel(
   "base_result_nurse_fever(3.0).xlsx"
 )
 
@@ -57,8 +57,8 @@ summarize_df <- function(df, name) {
 }
 
 summarize_df(fever_lab, "fever_lab")
-summarize_df(combine1, "combine1")
-summarize_df(combine2, "combine2")
+summarize_df(combined_1, "combined_1")
+summarize_df(combined_2, "combined_2")
 summarize_df(ct1, "ct1")
 summarize_df(ct2, "ct2")
 
@@ -81,46 +81,46 @@ fever_lab_missing_top5
 
 #==============================================================================
 # 파일 통합
-# 목표: combine1, combine2 병합 , ct1, ct2 병합
+# 목표: combined_1, combined_2 병합 , ct1, ct2 병합
 #==============================================================================
 
 # . 컬럼명 통일 -------------------------------------------------------------
 cat("=== STEP 2: 컬럼명 통일 ===\n")
 
-# combine1의 "이름" → "환자명"으로 변경
-if ("이름" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(환자명 = 이름)
-  cat("✓ combine1: '이름' → '환자명'\n")
+# combined_1의 "이름" → "환자명"으로 변경
+if ("이름" %in% names(combined_1)) {
+  combined_1 <- combined_1 %>% rename(환자명 = 이름)
+  cat("✓ combined_1: '이름' → '환자명'\n")
 }
 # "전원온병원" → "전원온 병원" 통일
-if ("전원온병원" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(`전원온 병원` = 전원온병원)
-  cat("✓ combine1: '전원온병원' → '전원온 병원'\n")
+if ("전원온병원" %in% names(combined_1)) {
+  combined_1 <- combined_1 %>% rename(`전원온 병원` = 전원온병원)
+  cat("✓ combined_1: '전원온병원' → '전원온 병원'\n")
 }
 # "퇴원일" → "퇴원일자" 통일
-if ("퇴원일" %in% names(combine1)) {
-  combine1 <- combine1 %>% rename(퇴원일자 = 퇴원일)
-  cat("✓ combine1: '퇴원일' → '퇴원일자'\n")
+if ("퇴원일" %in% names(combined_1)) {
+  combined_1 <- combined_1 %>% rename(퇴원일자 = 퇴원일)
+  cat("✓ combined_1: '퇴원일' → '퇴원일자'\n")
 }
-# combine2에 "노트" 컬럼 추가 (없을 경우)
-if (!"노트" %in% names(combine2)) {
-  combine2$노트 <- NA_character_
-  cat("✓ combine2: '노트' 컬럼 추가\n")
+# combined_2에 "노트" 컬럼 추가 (없을 경우)
+if (!"노트" %in% names(combined_2)) {
+  combined_2$노트 <- NA_character_
+  cat("✓ combined_2: '노트' 컬럼 추가\n")
 }
 # 3. 데이터 타입 통일 (병합 전 필수) -----------------------------------------
 # 모든 컬럼을 문자형으로 변환 (타입 불일치 방지)
-combine1 <- combine1 %>% mutate(across(everything(), as.character))
-combine2 <- combine2 %>% mutate(across(everything(), as.character))
+combined_1 <- combined_1 %>% mutate(across(everything(), as.character))
+combined_2 <- combined_2 %>% mutate(across(everything(), as.character))
 
 # 4. 두 파일 병합 ------------------------------------------------------------
 cat("=== STEP 4: 데이터 병합 ===\n")
 
-# 컬럼 순서 맞추기 (combine1 기준)
-col_names <- names(combine1)
-combine2 <- combine2[, col_names]
+# 컬럼 순서 맞추기 (combined_1 기준)
+col_names <- names(combined_1)
+combined_2 <- combined_2[, col_names]
 
 # 병합
-combined <- bind_rows(combine1, combine2)
+combined <- bind_rows(combined_1, combined_2)
 write_excel_csv(combined, "combined_sample.csv")
 
 
@@ -152,7 +152,7 @@ write_excel_csv(ct12, "ct12.csv")
 
 
 #------------------------------------------------------------------------------
-# 2. 샘플 데이터 생성 (1~2% 또는 최대 1000행)
+# 2. 샘플 데이터 생성 (1~2% 또는 최대 1000행) 이것은 AI에넣고 코딩 요구할때 쓰자.
 #------------------------------------------------------------------------------
 sample_df <- function(df, name) {
   set.seed(2025)
@@ -163,8 +163,8 @@ sample_df <- function(df, name) {
 }
 
 sample_df(fever_lab, "fever_lab")
-sample_df(combine1, "combine1")
-sample_df(combine2, "combine2")
+sample_df(combined_1, "combined_1")
+sample_df(combined_2, "combined_2")
 sample_df(ct1, "ct1")
 sample_df(ct2, "ct2")
 
@@ -284,8 +284,8 @@ write_excel_csv(visit_freq_summary, "방문횟수_분포.csv")
 #.original
 
 
-saveRDS(combine1, "combine1.rds")
-saveRDS(combine2, "combine2.rds")
+saveRDS(combined_1, "combined_1.rds")
+saveRDS(combined_2, "combined_2.rds")
 saveRDS(ct1, "ct1.rds")
 saveRDS(ct2, "ct2.rds")
 

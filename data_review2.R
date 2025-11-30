@@ -9,7 +9,7 @@ combined <-readRDS("combined.rds")
 
 combined_ids <- unique(combined$등록번호)
 lab_ids <- unique(fever_lab$등록번호)
- 
+
 
 # Combined 등록번호 (중복 제거)
 combined_ids <- combined %>% 
@@ -20,10 +20,10 @@ combined_ids <- combined %>%
 # Fever Lab 등록번호 (중복 제거)
 # 변수명이 다를 수 있으므로 확인
 
-  lab_ids <- fever_lab %>% 
-    distinct(등록번호) %>% 
-    pull(등록번호) %>% 
-    as.character()
+lab_ids <- fever_lab %>% 
+  distinct(등록번호) %>% 
+  pull(등록번호) %>% 
+  as.character()
 
 # Combined에는 있지만 Lab에는 없는 등록번호
 missing_in_lab <- setdiff(combined_ids, lab_ids)
