@@ -15,7 +15,7 @@ library(janitor)
 library(lubridate)
 
 # 작업 디렉토리 설정 (사용자 환경에 맞게 수정)
-setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
+setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 
 

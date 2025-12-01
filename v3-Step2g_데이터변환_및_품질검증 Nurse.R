@@ -17,7 +17,7 @@ library(naniar)
 library(lubridate)
 library(ggplot2)
 
-setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
+setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
 cat("\n╔═══════════════════════════════════════════════════════════╗\n")
 cat("  Step2g: Nurse변환 &  변수 품질 검증             \n")
