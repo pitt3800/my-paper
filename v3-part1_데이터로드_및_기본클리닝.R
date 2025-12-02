@@ -3,7 +3,7 @@
 # =============================================================================
 # 연구: 85세 이상 발열 환자 CT 진단 가치 연구
 # 목적: 원본 CSV 데이터 로드
-#       3개의 파일이 있는데 ㅇ 1,2는 2023.7월 기준을로 즉 Amis 3.0이후 데이터가 달라서 두 버전을 통일해야한다.
+#       3개의 파일이 있는데  1,2는 2023.7월 기준을로 즉 Amis 3.0이후 데이터가 달라서 두 버전을 통일해야한다.
 #       3번 파일은 두 기간사이에 코드가 완전히 바뀌었다. 
 #       1.Base + Nurse + Fever Including 2.ct_1_raw 3.ER_LAB_RSLT_s.csv
 #.      결측치 사전 처리,간단한 결측치 처리
@@ -20,7 +20,7 @@ library(janitor)        # 변수명 클리닝
 library(lubridate)      # 날짜 처리
 
 # 작업 디렉토리 설정 (사용자 환경에 맞게 수정)
-setwd("Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
+setwd("/Users/youjinlee/Documents/My R/fever paper")
 
 # 출력 디렉토리 생성
 dir.create("cleaned_data", showWarnings = FALSE)
@@ -36,77 +36,15 @@ cat("╚════════════════════════
 #------------------------------------------------------------------------------
 # 1. 데이터 로드 & 백업
 #------------------------------------------------------------------------------
-cat("=== STEP 1: 데이터 로드 (CSV 파일) ===\n")
+
 
 # 1.1 통합 파일 로드 (Base + Nurse + Fever Including)
 
-# 두 기간 데이터 병합
-combined_1_raw <- read_csv(
-  "base_result_nurse_fever_s.csv",
-  locale = locale(encoding = "CP949"),
-  show_col_types = FALSE
-)
-
-combined_2_raw <- read_csv(
-  "base_result_nurse_fever(3.0)_s.csv",
-  locale = locale(encoding = "CP949"),
-  show_col_types = FALSE
-)
-
-# 컬럼명 통일 (병합 전 처리)
-# 1. "이름" = "환자명" 통일
-if ("이름" %in% names(combined_1_raw)) {
-  combined_1_raw <- combined_1_raw %>% rename(환자명 = 이름)
-  cat("  - combined_1: '이름' → '환자명' 통일\n")
-}
-
-# 2. "전원온병원" = "전원온 병원" 통일 (띄어쓰기)
-if ("전원온병원" %in% names(combined_1_raw)) {
-  combined_1_raw <- combined_1_raw %>% rename(`전원온 병원` = 전원온병원)
-  cat("  - combined_1: '전원온병원' → '전원온 병원' 통일\n")
-}
-
-# 3. "퇴원일" = "퇴원일자" 통일
-if ("퇴원일" %in% names(combined_1_raw)) {
-  combined_1_raw <- combined_1_raw %>% rename(퇴원일자 = 퇴원일)
-  cat("  - combined_1: '퇴원일' → '퇴원일자' 통일\n")
-}
-
-# 4. "노트"는 combined_1에만 있음 → combined_2에 추가
-if (!"노트" %in% names(combined_2_raw)) {
-  combined_2_raw$노트 <- NA_character_
-  cat("  - combined_2: '노트' 컬럼 추가 (NA)\n")
-}
-
-# 5. ⭐ 데이터 타입 통일 (병합 전 필수!)
-# 모든 컬럼을 문자형(character)으로 변환하여 타입 불일치 방지
-cat("  - 데이터 타입 통일 중...\n")
-combined_1_raw <- combined_1_raw %>% 
-  mutate(across(everything(), as.character))
-
-combined_2_raw <- combined_2_raw %>% 
-  mutate(across(everything(), as.character))
-
-cat("  - 데이터 타입 통일 완료\n")
-
-# 컬럼 수 최종 확인 및 정렬
-cat(sprintf("\n  컬럼 수 확인: combined_1 = %d, combined_2 = %d\n", 
-            ncol(combined_1_raw), ncol(combined_2_raw)))
-
-# 컬럼 순서 맞추기 (combined_1 기준)
-col_names <- names(combined_1_raw)
-combined_2_raw <- combined_2_raw[, col_names]
-
-# 두 데이터 병합
-combined_raw <- bind_rows(combined_1_raw, combined_2_raw)
-combined_original <- combined_raw
-
-cat(sprintf("\n✓ 통합 파일 로드 완료: %d rows (245 + 345 = %d)\n", 
-            nrow(combined_raw), nrow(combined_raw)))
+combined_filtered <-readRDS("filtered_data/combined_filtered")
 
 #.기초사항 변경 ex> 나이에 Y 붙은 것,consciousness_level ,weight 모름 이면 NA로, sex 1이면 M
 
-combined_raw<- combined_raw %>%
+combined_raw<- combined_filtered %>%
   mutate(
     #  나이에서 'y' 또는 'Y' 제거
     나이 = str_remove_all(나이, "[yY]"),
@@ -128,34 +66,11 @@ combined_raw<- combined_raw %>%
     )
   )
 
-
-
 # 1.2 CT 파일 로드
-ct_1_raw <- read_csv(
-  "CT_result(1.0)_s.csv",
-  locale = locale(encoding = "CP949"),
-  show_col_types = FALSE
-)
 
-ct_2_raw <- read_csv(
-  "CT_result(3.0)_s.csv",
-  locale = locale(encoding = "CP949"),
-  show_col_types = FALSE
-)
+ct_filtered <-readRDS("filtered_data/ct_filtered")
 
-
-
-# CT 데이터 타입 통일 (병합 전)
-ct_1_raw <- ct_1_raw %>% dplyr::mutate(dplyr::across(everything(), as.character))
-ct_2_raw <- ct_2_raw %>% dplyr::mutate(dplyr::across(everything(), as.character))
-
-# CT 데이터 병합
-ct_raw <- dplyr::bind_rows(ct_1_raw, ct_2_raw)
-ct_original <- ct_raw
-
-cat(sprintf("✓ CT 파일 로드 완료: %d rows (51 + 356)\n", nrow(ct_raw)))
-
-
+ct_raw <-ct_filtered 
 
 # 1.3 Lab 파일 로드
 

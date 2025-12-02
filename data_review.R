@@ -12,9 +12,9 @@ library(lubridate)      # 날짜 처리
 library(readxl)
 
 
-setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025")
+setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025/raw_data")
 
-#. 데이터 불러오기
+#. 데이터 불러오기 ,완전 원본 데이터
 input_file <- "ER_LAB_RSLT.csv"  
 
 fever_lab <- read_csv(
@@ -31,13 +31,10 @@ combined_2 <- read_excel(
   "base_result_nurse_fever(3.0).xlsx"
 )
 
-ct1 <- read_excel(
-  "CT_result(1.0).xlsx"
-)
 
-ct2 <- read_excel(
-  "CT_result(3.0).xlsx"
-)
+ct1<-read.csv("CT_result(1.0).csv", header=T ,stringsAsFactors=FALSE)
+
+ct2<-read.csv("CT_result(3.0).csv", header=T ,stringsAsFactors=FALSE)
 
 #------------------------------------------------------------------------------
 # . 기본 구조 및 결측치 요약
@@ -121,7 +118,7 @@ combined_2 <- combined_2[, col_names]
 
 # 병합
 combined <- bind_rows(combined_1, combined_2)
-write_excel_csv(combined, "combined_sample.csv")
+write_excel_csv(combined, "combined.csv")
 
 
 
@@ -166,10 +163,12 @@ sample_df <- function(df, name) {
 sample_df(fever_lab, "fever_lab")
 sample_df(combined_1, "combined_1")
 sample_df(combined_2, "combined_2")
+sample_df(combined, "combined")
 sample_df(ct1, "ct1")
 sample_df(ct2, "ct2")
+sample_df(ct12, "ct12")
 
-#.csv 파일까지 다 저장시켰네.
+#.csv 파일까지 다 저장시켰네.sample_r/에 저장함
 
 
 # 전체케이스 nrow(combined): 14959  중복환자 모두제외length(unique(combined$등록번호)):11481

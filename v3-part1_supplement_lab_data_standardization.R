@@ -29,7 +29,37 @@ cat("========================================\n\n")
 # PART 1: 데이터 로드 및 표준화
 # ==============================================================================
 
-# 1.1 매핑 테이블 생성 =========================================================
+# 1.1 데이터 로드 및 전처리 ====================================================
+
+# 파일 경로 설정 
+setwd("/Users/youjinlee/Documents/My R/fever paper")
+
+lab_filtered <-readRDS("filtered_data/lab_filtered.rds")
+
+# BOM 제거 (첫 번째 컬럼명)
+if (str_detect(names(lab_filtered)[1], "^[\\ufeff]")) {
+  names(lab_filtered)[1] <- str_replace(names(lab_filtered)[1], "^[\\ufeff]", "")
+}
+
+
+fever_lab <- lab_filtered %>%
+  rename(
+    patient_id = 등록번호,
+    visit_date = 내원일자,
+    visit_time = 내원시간,
+    patient_name = 환자명,
+    sex = 성별,
+    age = 내원당시나이,
+    order_code = 처방코드,
+    order_name = 처방명,
+    detail_code= 세부검사코드, 
+    detail_name = 검사명,
+    result = 결과
+  )
+
+
+
+# 1.2 매핑 테이블 생성 =========================================================
 create_manual_mapping <- function() {
   # 검사명 표준화를 위한 매핑 테이블
   manual_mapping <- tribble(
@@ -113,7 +143,7 @@ create_manual_mapping <- function() {
   return(manual_mapping)
 }
 
-# 1.2 자동 표준화 함수 =========================================================
+# 1.3 자동 표준화 함수 =========================================================
 standardize_detail_name <- function(detail_name) {
   # NA 처리
   if (is.na(detail_name)) {
@@ -154,47 +184,10 @@ standardize_detail_name <- function(detail_name) {
   
   return(detail_name)
 }
-# ==============================================================================
-# 1.3 데이터 로드 및 전처리 ====================================================
-# ==============================================================================
-cat("1. 데이터 로딩 중...\n")
 
-# 파일 경로 설정 (필요에 따라 수정)
-setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025_s")
 
-# 파일 경로 설정
-input_file <- "ER_LAB_RSLT_s.csv"  
 
-# 데이터 읽기
-fever_lab_original <- read_csv(
-  input_file,
-  locale = locale(encoding = "UTF-8"),
-  show_col_types = FALSE
-)
 
-# BOM 제거 (첫 번째 컬럼명)
-if (str_detect(names(fever_lab_original)[1], "^[\\ufeff]")) {
-  names(fever_lab_original)[1] <- str_replace(names(fever_lab_original)[1], "^[\\ufeff]", "")
-}
-
-# 컬럼명 확인
-cat("컬럼 구조 확인:\n")
-cat(sprintf("  %s\n\n", paste(names(fever_lab_original), collapse = ", ")))
-
-fever_lab <- fever_lab_original %>%
-  rename(
-    patient_id = 등록번호,
-    visit_date = 내원일자,
-    visit_time = 내원시간,
-    patient_name = 환자명,
-    sex = 성별,
-    age = 내원당시나이,
-    order_code = 처방코드,
-    order_name = 처방명,
-    detail_code= 세부검사코드, 
-    detail_name = 검사명,
-    result = 결과
-  )
 
 # ==============================================================================
 # PART 2: Blood Culture 처리 및 15% 필터링
@@ -302,8 +295,11 @@ fever_lab <- fever_lab %>%
 
 cat(sprintf("  - 표준화 후 unique 검사명: %d개\n\n", n_distinct(fever_lab$detail_name)))
 
+
+
+
 # 환자 수 및 검사 빈도 계산
-n_patients <- n_distinct(fever_lab$patient_id)
+n_patients <- n_distinct(fever_lab$patient_id);n_patients
 cat(sprintf("4. 데이터 품질 확인...\n  - 총 환자 수: %d명\n", n_patients))
 
 test_frequency <- fever_lab %>%
