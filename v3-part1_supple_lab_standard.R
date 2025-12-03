@@ -195,6 +195,8 @@ standardize_detail_name <- function(detail_name) {
 
 cat("2. Blood Culture 처리 중...\n")
 
+#.다음 line 215까지는  내가 EMR에서 G(+),G(-) 나오는 것 확인하고 작성한듯.
+
 # Blood culture 행 식별 및 처리
 # 2023년 6월까지
 blood_culture_rows_pre2023 <- which(
@@ -213,8 +215,21 @@ blood_culture_rows_post2023 <- which(
 )
 
 all_blood_culture_rows <- c(blood_culture_rows_pre2023, blood_culture_rows_post2023)
+#.long data에서  blood culture 관련 행만 vector로 
 
-# Blood culture 처리
+
+blood_culture_view <- fever_lab %>%
+  dplyr::slice(all_blood_culture_rows) %>%
+  dplyr::select(patient_id, order_code, order_name, detail_code, detail_name, result)
+
+print(blood_culture_view, n = Inf)
+
+
+#===============================================================================================
+# # Blood culture 처리
+#===============================================================================================
+
+
 if (length(all_blood_culture_rows) > 0) {
   # detail_name을 Blood_culture로 변경
   fever_lab$detail_name[all_blood_culture_rows] <- "Blood_culture"
@@ -258,9 +273,14 @@ if (length(all_blood_culture_rows) > 0) {
   print(bc_summary)
 }
 
+#.length(all_blood_culture_rows)  923
 
 
-# 기존 검사명 표준화 (Blood_culture는 제외)
+#===============================================================================================
+# # 기존 검사명 표준화 (Blood_culture는 제외)
+#===============================================================================================
+
+
 cat("\n3. 검사명 표준화 중...\n")
 
 manual_mapping <- create_manual_mapping()
@@ -271,6 +291,7 @@ unique_test_names <- fever_lab %>%
   distinct(detail_name) %>%
   filter(!is.na(detail_name))
 
+
 mapping_table <- unique_test_names %>%
   mutate(
     standardized_manual = manual_mapping$standardized_name[
@@ -280,6 +301,7 @@ mapping_table <- unique_test_names %>%
     standardized_name = coalesce(standardized_manual, standardized_auto)
   ) %>%
   select(original_name = detail_name, standardized_name)
+
 
 # Blood_culture를 제외하고 표준화 적용
 fever_lab <- fever_lab %>%
@@ -297,7 +319,6 @@ cat(sprintf("  - 표준화 후 unique 검사명: %d개\n\n", n_distinct(fever_la
 
 
 
-
 # 환자 수 및 검사 빈도 계산
 n_patients <- n_distinct(fever_lab$patient_id);n_patients
 cat(sprintf("4. 데이터 품질 확인...\n  - 총 환자 수: %d명\n", n_patients))
@@ -311,6 +332,8 @@ test_frequency <- fever_lab %>%
     .groups = "drop"
   ) %>%
   arrange(desc(n_patients_tested))
+
+test_frequency #.여러번 내원했을때 환자 id는 하나이고 올때마다 검사하니깐.검사가 환자보다 3배이상 나올 수도 있을 듯.
 
 # 15% 필터링 - 제거할 변수 명확히 정의
 cat("\n5. 15% 필터링 및 불필요 변수 제거...\n")
@@ -508,6 +531,8 @@ if (nrow(blood_culture_data) > 0) {
     distinct() %>%
     mutate(Blood_culture = NA_character_)
 }
+
+
 
 # 나머지 데이터 wide 변환
 other_wide <- other_data %>%

@@ -244,6 +244,19 @@ flowchart <- tibble(
 
 # 85세 이상
 base_age_filter <- base_dedup %>% dplyr::filter(age >= 85)
+
+# > 이 데이터를 이용해서 쓰는 논문에서는 여러번 응급실에 내원한 환자에서는 한번만 포함시키고 
+# 싶어. 도 하루에 여러번한 검사의 경우 한번만 데이터에 포함시키고 싶어. 어디서 부터
+# 수정해야지?지?
+
+# ⭐ 환자당 첫 방문만 선택 (추가)
+base_age_filter <- base_age_filter %>%
+  dplyr::arrange(patient_id, visit_date) %>%
+  dplyr::group_by(patient_id) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup()
+
+
 flowchart$N[2] <- nrow(base_age_filter)
 flowchart$Excluded[2] <- nrow(base_dedup) - nrow(base_age_filter)
 
