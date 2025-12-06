@@ -1,5 +1,5 @@
 #.데이터 로딩& 파일 합치기  & smple data 만들기
-#.재방문 case 확인하기
+#.raw_data 저장하기
 
 #------------------------------------------------------------------------------
 # 0. 환경 설정
@@ -12,10 +12,10 @@ library(lubridate)      # 날짜 처리
 library(readxl)
 
 
-setwd("/Users/youjinlee/Documents/My R/fever paper/2017_2025/raw_data")
+setwd("/Users/youjinlee/Documents/My R/fever paper")
 
 #. 데이터 불러오기 ,완전 원본 데이터
-input_file <- "ER_LAB_RSLT.csv"  
+input_file <- "2017_2025_raw_data/ER_LAB_RSLT.csv"  
 
 fever_lab <- read_csv(
   input_file,
@@ -24,17 +24,17 @@ fever_lab <- read_csv(
 )
 
 combined_1 <- read_excel(
-  "base_result_nurse_fever.xlsx"
+  "2017_2025_raw_data/base_result_nurse_fever.xlsx"
 )
 
 combined_2 <- read_excel(
-  "base_result_nurse_fever(3.0).xlsx"
+  "2017_2025_raw_data/base_result_nurse_fever(3.0).xlsx"
 )
 
 
-ct1<-read.csv("CT_result(1.0).csv", header=T ,stringsAsFactors=FALSE)
+ct1<-read.csv("2017_2025_raw_data/CT_result(1.0).csv", header=T ,stringsAsFactors=FALSE)
 
-ct2<-read.csv("CT_result(3.0).csv", header=T ,stringsAsFactors=FALSE)
+ct2<-read.csv("2017_2025_raw_data/CT_result(3.0).csv", header=T ,stringsAsFactors=FALSE)
 
 #------------------------------------------------------------------------------
 # . 기본 구조 및 결측치 요약
@@ -118,7 +118,7 @@ combined_2 <- combined_2[, col_names]
 
 # 병합
 combined <- bind_rows(combined_1, combined_2)
-write_excel_csv(combined, "combined.csv")
+write_excel_csv(combined, "2017_2025_raw_data/combined.csv")
 
 
 
@@ -143,7 +143,7 @@ nrow(ct1) + nrow(ct2)
 head(ct12, 3)
 tail(ct12, 3)
 
-write_excel_csv(ct12, "ct12.csv")
+write_excel_csv(ct12, "2017_2025_raw_data/ct12.csv")
 
 
 
@@ -160,107 +160,33 @@ sample_df <- function(df, name) {
   cat(sprintf("✓ %s 샘플 저장 완료 (%d행)\n", name, n))
 }
 
-sample_df(fever_lab, "fever_lab")
-sample_df(combined_1, "combined_1")
-sample_df(combined_2, "combined_2")
-sample_df(combined, "combined")
-sample_df(ct1, "ct1")
-sample_df(ct2, "ct2")
-sample_df(ct12, "ct12")
+sample_df(fever_lab, "sample_r/fever_lab")
+sample_df(combined_1, "sample_r/combined_1")
+sample_df(combined_2, "sample_r/combined_2")
+sample_df(combined, "sample_r/combined")
+sample_df(ct1, "sample_r/ct1")
+sample_df(ct2, "sample_r/ct2")
+sample_df(ct12, "sample_r/ct12")
 
 #.csv 파일까지 다 저장시켰네.sample_r/에 저장함
 
 
-# 전체케이스 nrow(combined): 14959  중복환자 모두제외length(unique(combined$등록번호)):11481
-# 다른날 온환자는 다른 환자로 취급 14907
+
+
 
 # 5. 재방문 환자 분석 --------------------------------------------------------
-#==============================================================================
-# 수정: visit_counts 계산 부분 (더 명확한 버전)
-#==============================================================================
 
-# 5. 재방문 환자 분석 --------------------------------------------------------
-cat("=== STEP 5: 재방문 환자 분석 ===\n")
+#.연구 주제에 따라 이분을 선택해야..
 
-# 등록번호 + 내원일자 기준으로 방문 횟수 계산
-# ⭐ 같은 날 여러 번 내원해도 1회로 카운트, 한 환자가 다른날 여러번 내원하면 다른케이스로
-visit_counts <- combined %>%
-  filter(!is.na(등록번호), !is.na(내원일자), 
-         등록번호 != "", 내원일자 != "") %>%
-  # 등록번호 + 내원일자 조합이 같으면 1개 행만 남김
-  distinct(등록번호, 내원일자) %>%
-  # 환자별 총 방문일 수 계산
-  group_by(등록번호) %>%
-  summarise(
-    총_방문일수 = n(),
-    방문일자_목록 = paste(내원일자, collapse = ", "),
-    .groups = "drop"
-  )
-visit_counts
-
-
-# 2회 이상 내원한 환자만 필터링
-repeat_visitors <- visit_counts %>%
-  filter(총_방문일수 >= 2) %>%
-  arrange(desc(총_방문일수), 등록번호)
-repeat_visitors
-
-
-# 6. 재방문 환자 상세 정보 테이블 --------------------------------------------
-
-# 재방문 환자의 전체 기록
-repeat_visit_details <- combined %>%
-  filter(등록번호 %in% repeat_visitors$등록번호) %>%
-  select(등록번호, 환자명, 내원일자, 내원시간, 성별, 나이, 
-         주증상1, 진단명, 진료결과) %>%
-  arrange(등록번호, 내원일자, 내원시간)
-repeat_visit_details
-
-
-# 같은 날 2번 이상 내원한 환자 정보
-revisit_patients_info <- combined %>%
-  # 데이터 정제
-  filter(!is.na(등록번호), !is.na(내원일자), 
-         등록번호 != "", 내원일자 != "") %>%
-  
-  # 일일 방문 횟수 계산 (mutate = 원본 유지!)
-  group_by(등록번호, 내원일자) %>%
-  mutate(일일방문횟수 = n()) %>%  #  n() 그굽으로 묶었을때 그 그룹마다 몇개씩 있냐?
-  ungroup() %>%
-  
-  # 하루 2번 이상 방문한 적 있는 환자만
-  group_by(등록번호) %>%
-  filter(any(일일방문횟수 >= 2)) %>%
-  ungroup() %>%
-  
-  # 각 환자의 첫 방문만 (환자당 1행)
-  group_by(등록번호) %>%
-  arrange(내원일자) %>%
-  slice(1) %>%
-  ungroup() %>%
-  
-  # 필요한 컬럼만
-  select(등록번호, 나이, 성별,일일방문횟수)
-
-# 결과 확인
-revisit_patients_info
-
-# 환자 수 확인
-cat("같은 날 2번 이상 내원한 환자:", nrow(revisit_patients_info), "명\n")
+#1.모든 재방문을 하나의 방문으로 할 수도 있고.. 현재 fever & CT 연구
+#2 ⭐ 같은 날 여러 번 내원해도 1회로 카운트, 한 환자가 다른날 여러번 내원하면 다른케이스로 할  수도 있고
+#3.같은 날 재내원한 환자만 선택할 수도 있고.
+#4.여러날 재내원한 환자만 선택할 수도 있고
+#5.모든 재내원을 각자의 경우로 선택할 수도 있고.
 
 
 
 
-# 7. 결과 테이블 요약 --------------------------------------------------------
-
-# 방문 횟수별 환자 수
-visit_freq_summary <- repeat_visitors %>%
-  count(총_방문일수, name = "환자수") %>%
-  mutate(비율 = round(환자수 / sum(환자수) * 100, 1)) %>%
-  arrange(desc(총_방문일수))
-
-visit_freq_summary
-print(visit_freq_summary, n = 20)
 
 
 
@@ -272,27 +198,134 @@ print(visit_freq_summary, n = 20)
 #.5개law file csv 
 
 
-write_excel_csv(repeat_visitors, "재방문환자_요약.csv")
-write_excel_csv(repeat_visit_details, "재방문환자_상세기록.csv")
-write_excel_csv(revisit_patients_info, "같은날2번이상내원.csv")
-write_excel_csv(repeat_visit_details, "재방문환자_상세기록.csv")
-write_excel_csv(visit_freq_summary, "방문횟수_분포.csv")
-
 ## RDS 저장 (R 전용)
 
 
 #.original
 
 
-saveRDS(combined_1, "combined_1.rds")
-saveRDS(combined_2, "combined_2.rds")
-saveRDS(ct1, "ct1.rds")
-saveRDS(ct2, "ct2.rds")
+saveRDS(combined_1, "2017_2025_raw_data/combined_1.rds")
+saveRDS(combined_2, "2017_2025_raw_data/combined_2.rds")
+saveRDS(ct1, "2017_2025_raw_data/ct1.rds")
+saveRDS(ct2, "2017_2025_raw_data/ct2.rds")
 
-saveRDS(fever_lab, "fever_lab.rds")
-saveRDS(ct12, "ct12.rds")
-saveRDS(combined, "combined.rds")
+saveRDS(fever_lab, "2017_2025_raw_data/fever_lab.rds")
+saveRDS(ct12, "2017_2025_raw_data/ct12.rds")
+saveRDS(combined, "2017_2025_raw_data/combined.rds")
 
-#.계산한 내용
-saveRDS(repeat_visit_details, "재방문환자_상세기록.rds")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#===============================================================================================
+# 아래 내용은 재방문 환자에 대한 정보로 나중에 필요할 때 정리
+#===============================================================================================
+
+# 
+# 
+# # 등록번호 + 내원일자 기준으로 방문 횟수 계산
+# # ⭐ 같은 날 여러 번 내원해도 1회로 카운트, 한 환자가 다른날 여러번 내원하면 다른케이스로
+# visit_counts <- combined %>%
+#   filter(!is.na(등록번호), !is.na(내원일자), 
+#          등록번호 != "", 내원일자 != "") %>%
+#   # 등록번호 + 내원일자 조합이 같으면 1개 행만 남김
+#   distinct(등록번호, 내원일자) %>%
+#   # 환자별 총 방문일 수 계산
+#   group_by(등록번호) %>%
+#   summarise(
+#     총_방문일수 = n(),
+#     방문일자_목록 = paste(내원일자, collapse = ", "),
+#     .groups = "drop"
+#   )
+# visit_counts
+# 
+# 
+# # 2회 이상 내원한 환자만 필터링
+# repeat_visitors <- visit_counts %>%
+#   filter(총_방문일수 >= 2) %>%
+#   arrange(desc(총_방문일수), 등록번호)
+# repeat_visitors
+# 
+# 
+# # 6. 재방문 환자 상세 정보 테이블 --------------------------------------------
+# 
+# # 재방문 환자의 전체 기록
+# repeat_visit_details <- combined %>%
+#   filter(등록번호 %in% repeat_visitors$등록번호) %>%
+#   select(등록번호, 환자명, 내원일자, 내원시간, 성별, 나이, 
+#          주증상1, 진단명, 진료결과) %>%
+#   arrange(등록번호, 내원일자, 내원시간)
+# repeat_visit_details
+# 
+# 
+# # 같은 날 2번 이상 내원한 환자 정보
+# revisit_patients_info <- combined %>%
+#   # 데이터 정제
+#   filter(!is.na(등록번호), !is.na(내원일자), 
+#          등록번호 != "", 내원일자 != "") %>%
+#   
+#   # 일일 방문 횟수 계산 (mutate = 원본 유지!)
+#   group_by(등록번호, 내원일자) %>%
+#   mutate(일일방문횟수 = n()) %>%  #  n() 그굽으로 묶었을때 그 그룹마다 몇개씩 있냐?
+#   ungroup() %>%
+#   
+#   # 하루 2번 이상 방문한 적 있는 환자만
+#   group_by(등록번호) %>%
+#   filter(any(일일방문횟수 >= 2)) %>%
+#   ungroup() %>%
+#   
+#   # 각 환자의 첫 방문만 (환자당 1행)
+#   group_by(등록번호) %>%
+#   arrange(내원일자) %>%
+#   slice(1) %>%
+#   ungroup() %>%
+#   
+#   # 필요한 컬럼만
+#   select(등록번호, 나이, 성별,일일방문횟수)
+# 
+# # 결과 확인
+# revisit_patients_info
+# 
+# # 환자 수 확인
+# cat("같은 날 2번 이상 내원한 환자:", nrow(revisit_patients_info), "명\n")
+# 
+
+
+# 
+# 
+# 
+# # 7. 결과 테이블 요약 --------------------------------------------------------
+# 
+# # 방문 횟수별 환자 수
+# visit_freq_summary <- repeat_visitors %>%
+#   count(총_방문일수, name = "환자수") %>%
+#   mutate(비율 = round(환자수 / sum(환자수) * 100, 1)) %>%
+#   arrange(desc(총_방문일수))
+# 
+# visit_freq_summary
+# print(visit_freq_summary, n = 20)
 

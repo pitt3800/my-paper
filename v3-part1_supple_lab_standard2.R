@@ -56,34 +56,83 @@ post2023 <- fever_lab %>%
 # STEP 2: G(+) 또는 G(-) 결과가 있는 행 찾기
 # ==============================================================================
 
+
+
+#===============================================================================================
 # 2023-06-30까지 데이터에서 result 에서 G(+)/G(-) 찾기
 
 gram_pre2023 <- pre2023 %>%
   filter(str_detect(
     result,
-    regex("g\\+|g\\-|g\\(\\+\\)|g\\(\\-\\)|gram.*positive|gram.*negative|그람.*양성|그람.*음성",
+    regex("g\\+|g\\-|g\\(\\+\\)|g\\(\\-\\)|gram.*positive|gram.*negative|그람.*양성|그람.*음성|yeast|no.*growth|negative",
           ignore_case = TRUE)
   )) %>% 
   select(patient_id, patient_name,visit_date, order_name,order_code, detail_code,detail_name, result) %>%
   distinct()
 
 #.pre2023과 gram-pre2023 비교함. 복잡하다. 
-#.결론은 detatil_code: z11184,(같은결과지만 detail_name : (1.0)SMEAR GRAM STAIN, BLOOD)
-# 인것만 filtering하고 추후 bactremia  연구시 detatil_code: z11184에서 G(+-)인군과 아닌군 비교하면 될듯.
+#.결론은 detatil_code: Z11184,(같은결과지만 detail_name : (1.0)SMEAR GRAM STAIN, BLOOD)
+# 인것만 filtering 이렇게 filtering하면 한환자에서도 여러개가 나온다. 
+#.bactremia 환자 구분할때는 detatil_code: Z11184 이면서 결과값에 하나라라도 G(+) or G(-) 찾으면 될 듯
 
 
 
+#===============================================================================================
 # 2023-07-01부터 데이터에서 G(+)/G(-) 찾기
+
+
+
+# 혈액검사에서  혈액배영검사를 한 환자를 우선 선택한 다음에 그중 G(+) or G(-) 와 같이 
+# Gram stain (+) or Gram stain(-) ...인 환자를 구분하고 싶다. 
+# 이를 위해  order_code (= 처방코드에) DB0196 이 있으면 culture. 시행하였다고 판단하고 
+# 세부검사코드(detail_code)ABACT 있으면 G(+) or G(-) 있라고 판단 하면 될듯.
+
+# Blood culture 결과 필터링 및 분류
 gram_post2023 <- post2023 %>%
+  # 1단계: 모든 배양 결과 필터링 (Yeast, no growth 포함)
   filter(str_detect(
     result,
-    regex("g\\+|g\\-|g\\(\\+\\)|g\\(\\-\\)|gram.*positive|gram.*negative|그람.*양성|그람.*음성",
+    regex("g\\+|g\\-|g\\(\\+\\)|g\\(\\-\\)|gram.*positive|gram.*negative|그람.*양성|그람.*음성|yeast|no.*growth|negative",
           ignore_case = TRUE)
   )) %>% 
-  select(patient_id, patient_name,visit_date, order_name,order_code, detail_code,detail_name, result) %>%
+  
+  # 2단계: 상세 분류 변수 생성
+  mutate(
+    has_gplus = str_detect(result, regex("g\\(\\+\\)|g\\+|gram.*positive|그람.*양성", 
+                                         ignore_case = TRUE)),
+    has_gminus = str_detect(result, regex("g\\(\\-\\)|g\\-|gram.*negative|그람.*음성", 
+                                          ignore_case = TRUE)),
+    has_yeast = str_detect(result, regex("yeast", ignore_case = TRUE)),
+    has_negative = str_detect(result, regex("negative|no.*growth|음성", ignore_case = TRUE)),
+    
+    # 3단계: 최종 분류
+    culture_result = case_when(
+      has_negative ~ "Negative",
+      has_yeast ~ "Yeast",
+      has_gplus & has_gminus ~ "Mixed (G+ & G-)",
+      has_gplus ~ "Gram-positive",
+      has_gminus ~ "Gram-negative",
+      TRUE ~ "Other"
+    )
+  ) %>%
+  
+  # 4단계: 필요한 열만 선택
+  select(patient_id, patient_name, visit_date, order_name, order_code, 
+         detail_code, detail_name, result, 
+         has_gplus, has_gminus, has_yeast, has_negative, culture_result) %>%
   distinct()
 
+# 결과 확인
+gram_post2023
 
+# 분류별 빈도표
+gram_post2023 %>%
+  count(culture_result) %>%
+  mutate(percentage = round(n / sum(n) * 100, 1))
+
+# 상세 패턴 확인
+gram_post2023 %>%
+  count(has_gplus, has_gminus, has_yeast, has_negative, culture_result, sort = TRUE)
 
 
 # order_name 종류
