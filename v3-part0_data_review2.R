@@ -1,7 +1,7 @@
 #.목표
-#.CT12 정리 경우에도 두번 내원한 환자는 없애기 독립성 유지 위해
+#.CT12 정리 : 이 자료가 가장 중요하고 적은 자료니깐. 이걸 중심으로 
 #.데이터 소실 최소화 하기 위해 CT 찍은 환자 먼저 정리 후 이 환자 중 lab한 사람으로 
-#.CT12 에서 APCT, chest CT 관련된 CT는 제거
+#.CT12 에서 APCT, chest CT 관련된 CT만 남기기
 #.APCT, chest CT 둘다 찍은 환자만 filtering 이후 둘다 찍은 날만 남기기
 #.CT_ChestAbdomen.csv, CT_ChestAbdomen.rds 남기기
 # 이 파일은 1874명 CT 찍은 환자..만 추렸어..
@@ -12,7 +12,7 @@
 setwd('/Users/youjinlee/Documents/My R/fever paper')
 
 fever_lab <-readRDS("2017_2025_raw_data/fever_lab.rds")
-ct12 <-readRDS("2017_2025_raw_datact12.rds")
+ct12 <-readRDS("2017_2025_raw_data/ct12.rds")
 combined <-readRDS("2017_2025_raw_data/combined.rds")
 
 
@@ -119,8 +119,8 @@ cat(sprintf("최종 CT 기록: %d건 (%d명)\n\n",
 
 ct_final
 
-
-ct_final_ <- ct_final %>%
+#.CT 판독 소견을 합쳐서 하나의 행으로 만들어
+ct_final <- ct_final %>%
   group_by(등록번호, 성명, 검사일자) %>%
   summarize(
     # 접수시간: 첫 번째 값 사용

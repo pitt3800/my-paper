@@ -32,17 +32,18 @@ cat("========================================\n\n")
 # 1.1 데이터 로드 및 전처리 ====================================================
 
 # 파일 경로 설정 
-setwd("/Users/youjinlee/Documents/My R/fever paper")
 
-lab_filtered <-readRDS("filtered_data/lab_filtered.rds")
+
+fever_lab <-readRDS("matching_data//fever_lab_CT_matching.rds")
+
 
 # BOM 제거 (첫 번째 컬럼명)
-if (str_detect(names(lab_filtered)[1], "^[\\ufeff]")) {
-  names(lab_filtered)[1] <- str_replace(names(lab_filtered)[1], "^[\\ufeff]", "")
+if (str_detect(names(fever_lab)[1], "^[\\ufeff]")) {
+  names(fever_lab)[1] <- str_replace(names(fever_lab)[1], "^[\\ufeff]", "")
 }
 
 
-fever_lab <- lab_filtered %>%
+fever_lab <- fever_lab %>%
   rename(
     patient_id = 등록번호,
     visit_date = 내원일자,
@@ -184,6 +185,16 @@ standardize_detail_name <- function(detail_name) {
   
   return(detail_name)
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

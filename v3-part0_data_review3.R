@@ -1,128 +1,187 @@
 #===============================================================================================
-  # sample data 만들기: base와 fever lab이 다 갖추어진 경우: 완결된 가상의 데이터로  분석 연습용
+  # v3-part0_data_review2.R에서 만든 CT_ChestAbdomen.csv, CT_ChestAbdomen.rsd 불러와
+  
+  #.이 파일을 기준으로 fever_lab , combined filtering 하기 즉 CT 찍은 사람 중에서 lab한 사람들만 골라내기
+  #.matching_data  폴더에 2개 ㅍ일 만들기
+  #.sample_r2 다시 만들기- AI로 코드 만들기 위해
 #=======================================================================================================
 
-#==============================================================================
-# sample_r/에 있는 파일 불러와서 내 모든 CSV 파일을 자동으로 읽어, 파일명으로 객체 저장- 
-# 여기서 만들어진 파일을 AI에 첨부
+#. 데이터 불러오기
 
-#==============================================================================
-library(tidyverse)
+combined <-readRDS("2017_2025_raw_data/combined.rds")
+fever_lab <-readRDS("2017_2025_raw_data/fever_lab.rds")
 
-# 1️⃣ CSV 파일 경로 목록 불러오기
-csv_files <- list.files(path = "/Users/youjinlee/Documents/My R/fever paper/sample_r", pattern = "\\.csv$", full.names = TRUE)
+CT_ChestAbdomen <-readRDS("2017_2025_raw_data/CT_ChestAbdomen.rds")
 
-# 2️⃣ 각 파일을 읽어서 파일명으로 객체 생성
-for (file in csv_files) {
-  # 파일명에서 확장자(.csv) 제거 → 변수명으로 사용
-  varname <- tools::file_path_sans_ext(basename(file))
-  
-  # 파일 읽기
-  df <- read.csv(file, header = TRUE, stringsAsFactors = FALSE)
-  
-  # 전역 환경(Global Environment)에 동적으로 변수 생성
-  assign(varname, df)
-  
-  cat("✓", varname, "불러오기 완료 (", nrow(df), "행)\n")
-}
+CT_ChestAbdomen <- CT_ChestAbdomen %>%
+  rename(환자명 = 성명)
 
-cat("\n=== 모든 CSV 파일 로드 완료 ===\n")
+#. 비교하기 위해 모든 변수 class 바꾸기
 
 
-#.여기서 만든 AI로 sample_r을 올려서 작업시작함.
+combined <- combined %>%
+  mutate(
+    등록번호 = as.character(등록번호),
+    환자명 = as.character(환자명),
+    내원일자 = ymd(내원일자)
+  )
+
+fever_lab <- fever_lab %>%
+  mutate(
+    등록번호 = as.character(등록번호),
+    환자명 = as.character(환자명),
+    내원일자 = ymd(내원일자)
+  )
 
 
-
-
-#==============================================================================
-# CT와 Lab 모두 시행한 환자 데이터 병합
-# 목표: CT + Lab 모두 시행 환자만 선택하여 통합 데이터셋 생성 raw 데이터 이용하기
-#==============================================================================
-
-# 작업 디렉토리 설정 (
-setwd('/Users/youjinlee/Documents/My R/fever paper')
-
-#------------------------------------------------------------------------------
-# 1. 데이터 로드 (완전 raw data)
-#------------------------------------------------------------------------------
-ct <- read_csv("2017_2025_raw_data/ct12.csv", 
-               locale = locale(encoding = "UTF-8"),
-               show_col_types = FALSE)
-
-lab <- read_csv("2017_2025_raw_data/ER_LAB_RSLT.csv",
-                locale = locale(encoding = "CP949"),
-                show_col_types = FALSE)
-
-combined <- read_csv("2017_2025_raw_data/combined.csv",
-                     locale = locale(encoding = "UTF-8"),
-                     show_col_types = FALSE)
-
-# 데이터 크기 확인
-cat(sprintf("\n원본 데이터: CT %d행, Lab %d행, Combined %d행\n\n", 
-            nrow(ct), nrow(lab), nrow(combined)))
-#.이 세파일은 원본 그대로 다만  combined는 합치기 위해 변수명만 아주 조금 바꿈.
+CT_ChestAbdomen <- CT_ChestAbdomen %>%
+  mutate(
+    등록번호 = as.character(등록번호),
+    환자명 = as.character(환자명),
+    검사일자 = ymd(검사일자)
+  )
 
 
 
+# 1. CT_ChestAbdomen에서 환자 목록 추출
+# CT 검사를 받은 환자의 등록번호, 성명, 검사일자 추출
+CT_patients <- CT_ChestAbdomen %>%
+  select(등록번호, 환자명, 검사일자) %>%
+  distinct()
 
-#------------------------------------------------------------------------------
-# 2. CT와 Lab 모두 시행한 환자 식별( 두번 이상 내원환 환자는 한번만 내원한 것으로 취급합)
-#------------------------------------------------------------------------------
-ct_patients <- unique(ct$등록번호)
-lab_patients <- unique(lab$등록번호)
-both_patients <- intersect(ct_patients, lab_patients)
-
-cat(sprintf("CT 시행: %d명, Lab 시행: %d명, 둘 다: %d명\n\n", 
-            length(ct_patients), length(lab_patients), length(both_patients)))
-
-#.CT 시행: 3785명, Lab 시행: 6259명, 둘 다: 3765명
-
-#------------------------------------------------------------------------------
-# 3. 필터링
-#------------------------------------------------------------------------------
-combined_filtered <- combined %>% filter(등록번호 %in% both_patients)
-ct_filtered <- ct %>% filter(등록번호 %in% both_patients)
-lab_filtered <- lab %>% filter(등록번호 %in% both_patients)
-
-cat(sprintf("필터링 결과: Combined %d행, CT %d행, Lab %d행\n\n",
-            nrow(combined_filtered), nrow(ct_filtered), nrow(lab_filtered)))
-
-# 필터링 결과: Combined 5780행, CT 7017행, Lab 1245379행
+cat("CT 검사 환자 수:", nrow(CT_patients), "\n")
+CT_patients %>% head()
 
 
-#------------------------------------------------------------------------------
-# 4. 저장
-#------------------------------------------------------------------------------
+# 2. combined 데이터에서 CT 환자만 필터링
+# 등록번호와 환자명이 모두 일치하는 행만 선택
+combined_ct <- combined %>%
+  inner_join(CT_patients, 
+             by = c("등록번호" = "등록번호", "환자명" = "환자명"))
+
+cat("\n=== combined 필터링 결과 ===\n")
+cat("필터링 전:", nrow(combined), "행\n")
+cat("필터링 후:", nrow(combined_ct), "행\n\n")
 
 
+# 3. combined에서 CT 검사일자와 가장 가까운 내원일자만 선택
+# 날짜 차이 절대값을 계산하여 가장 작은 것만 선택
+combined_closest <- combined_ct %>%
+  mutate(날짜차이 = abs(내원일자 - 검사일자)) %>%
+  group_by(등록번호, 검사일자) %>%
+  slice_min(날짜차이, n = 1, with_ties = FALSE) %>%  # 동일 차이 시 첫 번째만
+  ungroup() %>%
+  select(-날짜차이)  # 임시 변수 제거
 
-write_excel_csv(combined_filtered , "filtered_data/combined_filtered.csv")
-write_excel_csv(ct_filtered, "filtered_data/ct_filtered.csv")
-write_excel_csv(lab_filtered, "filtered_data/lab_filtered.csv")
+cat("=== 가장 가까운 내원일자만 선택 ===\n")
+cat("선택 전:", nrow(combined_ct), "행\n")
+cat("선택 후:", nrow(combined_closest), "행\n\n")
 
-saveRDS(combined_filtered, "filtered_data/combined_filtered")
-saveRDS(ct_filtered , "filtered_data/ct_filtered")
-saveRDS(lab_filtered, "filtered_data/lab_filtered.rds")
+# 환자별 내원일자 확인
+combined_closest %>%
+  count(등록번호, name = "방문횟수") %>%
+  count(방문횟수, name = "환자수")
+
+#.CT_ChestAbdomen 가 combined_closest 와 비교하여 행 하나가 더 많네..그래서 확인해보자.
+CT_ChestAbdomen_only <- CT_ChestAbdomen %>%
+  anti_join(combined_closest, by = "등록번호")
+CT_ChestAbdomen_only
 
 
 
 
 
 
+# 4. fever_lab 데이터에서 CT 환자만 필터링
+fever_lab_ct <- fever_lab %>%
+  inner_join(CT_patients, 
+             by = c("등록번호" = "등록번호", "환자명" = "환자명"))
 
-cat("저장 완료: merged_ct_lab_patients.csv, .rds\n\n")
+cat("\n=== fever_lab 필터링 결과 ===\n")
+cat("필터링 전:", nrow(fever_lab), "행\n")
+cat("필터링 후:", nrow(fever_lab_ct), "행\n\n")
 
 
-#------------------------------------------------------------------------------
-# 8. 확인
-#------------------------------------------------------------------------------
-# 컬럼명 출력
-cat("컬럼 구조 (처음 20개):\n")
-print(head(names(final_merged), 20))
+# 5. fever_lab에서 CT 검사일자와 가장 가까운 내원일자만 선택
+fever_lab_closest <- fever_lab_ct %>%
+  mutate(날짜차이 = abs(내원일자 - 검사일자)) %>%
+  group_by(등록번호, 검사일자, 세부검사코드) %>%  # 검사항목별로도 구분
+  slice_min(날짜차이, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(-날짜차이)
 
-# 데이터 미리보기
-cat("\n데이터 샘플:\n")
-final_merged %>% select(1:10) %>% head(3)
+cat("=== 가장 가까운 내원일자만 선택 ===\n")
+cat("선택 전:", nrow(fever_lab_ct), "행\n")
+cat("선택 후:", nrow(fever_lab_closest), "행\n\n")
 
-cat("\n✅ 완료!\n")
+# 환자별 검사 수 확인
+fever_lab_closest %>%
+  count(등록번호, name = "검사항목수") %>%
+  summary()
 
+
+# 6. 결과 검증
+cat("\n=== 결과 검증 ===\n")
+
+# 6-1. CT 환자 수와 일치 확인
+cat("CT 환자 수:", n_distinct(CT_patients$등록번호), "\n")
+cat("combined_closest 환자 수:", n_distinct(combined_closest$등록번호), "\n")
+cat("fever_lab_closest 환자 수:", n_distinct(fever_lab_closest$등록번호), "\n\n")
+
+# 6-2. 샘플 환자의 날짜 매칭 확인 (첫 5명)
+sample_check <- combined_closest %>%
+  select(등록번호, 환자명, 내원일자, 검사일자) %>%
+  head(5)
+
+cat("샘플 환자의 내원일자-검사일자 매칭:\n")
+sample_check %>%
+  mutate(날짜차이 = abs(내원일자 - 검사일자)) %>%
+  print()
+
+# 6-3. 내원일자와 검사일자 차이 분포
+cat("\n내원일자-검사일자 차이 (일) 분포:\n")
+combined_closest %>%
+  mutate(날짜차이_일 = abs(내원일자 - 검사일자)) %>%
+  pull(날짜차이_일) %>%
+  summary()
+
+
+#.AI 를 위한 sample 뽑기
+
+set.seed(123) 
+
+
+# 0>CT_ChestAbdomen 에서 100명 무작위 추출
+CT_ChestAbdomen_sample <-CT_ChestAbdomen %>%
+  sample_n(100)
+
+# 1) 추출된 등록번호만 벡터로 저장
+selected_ids <-CT_ChestAbdomen_sample$등록번호
+
+# 3) fever_lab_CT_matching에서 동일 환자만 필터링
+fever_lab_matching_sample <- fever_lab_closest %>%
+  filter(등록번호 %in% selected_ids)
+
+# 4) combined_CT_matching에서 100명 무작위 추출
+combined_CT_matching_sample <- combined_closest %>%
+  filter(등록번호 %in% selected_ids)
+
+
+
+
+# 7. 결과 저장
+saveRDS(combined_closest, "matching_data/combined_CT_matching.rds")
+saveRDS(fever_lab_closest, "matching_data/fever_lab_CT_matching.rds")
+saveRDS(CT_ChestAbdomen, "matching_data/CT_ChestAbdomen_matching.rds") #.이 파일은 바뀐게 없으나 단계별로 같은 폴더에 관리하기 쉽게 만음
+
+write_csv(combined_closest, "matching_data/combined_CT_matching.csv")
+write_csv(fever_lab_closest, "matching_data/fever_lab_CT_matching.csv")
+write_csv(CT_ChestAbdomen, "matching_data/CT_ChestAbdomen_matching.csv")
+
+saveRDS(combined_CT_matching_sample, "matching_sample/combined_CT_matching_sample.rds")
+saveRDS(fever_lab_matching_sample, "matching_sample/fever_lab_matching_sample.rds")
+saveRDS(CT_ChestAbdomen_sample, "matching_sample/CT_ChestAbdomen_sample.rds")
+
+write_csv(CT_ChestAbdomen_sample, "matching_sample/CT_ChestAbdomen_sample.csv")
+write_csv(fever_lab_matching_sample, "matching_sample/fever_lab_matching_sample.csv")
+write_csv(combined_CT_matching_sample, "matching_sample/combined_CT_matching_sample.csv")

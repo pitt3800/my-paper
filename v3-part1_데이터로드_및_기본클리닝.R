@@ -36,15 +36,20 @@ cat("╚════════════════════════
 #------------------------------------------------------------------------------
 # 1. 데이터 로드 & 백업
 #------------------------------------------------------------------------------
+#v3-part0_data_review3.R에서 CT를 시행한 case만 추려서 
+#combined_CT_matching,ever_lab_CT_matching 불러오기
+
+
+
 
 
 # 1.1 통합 파일 로드 (Base + Nurse + Fever Including)
 
-combined_filtered <-readRDS("filtered_data/combined_filtered")
+combined <-readRDS("matching_data/combined_CT_matching.rds") #.raw data 2개합치고 CT 찍은 환자까지 matching 까지
 
 #.기초사항 변경 ex> 나이에 Y 붙은 것,consciousness_level ,weight 모름 이면 NA로, sex 1이면 M
 
-combined_raw<- combined_filtered %>%
+combined_raw<- combined %>%
   mutate(
     #  나이에서 'y' 또는 'Y' 제거
     나이 = str_remove_all(나이, "[yY]"),
@@ -68,9 +73,9 @@ combined_raw<- combined_filtered %>%
 
 # 1.2 CT 파일 로드
 
-ct_filtered <-readRDS("filtered_data/ct_filtered")
+ct_raw <-readRDS("matching_data/combined_CT_matching.rds") #.두 raw file 합치고 cleaning 완성됨
 
-ct_raw <-ct_filtered 
+
 
 # 1.3 Lab 파일 로드
 
