@@ -73,7 +73,6 @@ gram_pre2023 <- pre2023 %>%
 
 
 
-
 # 2023-07-01부터 데이터에서 G(+)/G(-) 찾기
 gram_post2023 <- post2023 %>%
   filter(str_detect(
@@ -86,10 +85,6 @@ gram_post2023 <- post2023 %>%
 
 
 
-cat("\n========================================\n")
-cat("2023-07-01부터 G(+)/G(-) 결과\n")
-cat("========================================\n")
-cat(sprintf("발견: %d건\n\n", nrow(gram_post2023)))
 
 # order_name 종류
 cat("--- order_name 종류 ---\n")
